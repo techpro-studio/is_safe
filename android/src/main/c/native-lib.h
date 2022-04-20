@@ -125,10 +125,12 @@ extern "C" {
 #endif
 
 JNIEXPORT jboolean JNICALL
-Java_com_goalplan_gp_1jb_1root_1check_FridaDetector_detected(JNIEnv *env, jobject this);
+Java_studio_techpro_is_1safe_FridaDetector_detected(JNIEnv *env, jobject this);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif //DETECTFRIDA_MYLIBC_H
+
 
