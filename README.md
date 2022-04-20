@@ -1,4 +1,4 @@
-# isSafe
+# is_safe
 Root / Jailbreak detection for Flutter Android/iOS app
 
 For iOS Jailbreak detection was used [This great detector](https://github.com/avltree9798/isJailbroken)
