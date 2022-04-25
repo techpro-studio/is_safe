@@ -123,7 +123,7 @@ static inline void parse_proc_maps_to_fetch_path(char **filepaths) {
                     sscanf(map, "%s %s %s %s %s %s", tmp, buf, tmp, tmp, tmp, path);
                     if (buf[2] == 'x') {
                         size_t size = my_strlen(path) + 1;
-                        filepaths[i] = malloc(size * 8);
+                        filepaths[i] = malloc(size);
                         my_strlcpy(filepaths[i], path, size);
                         counter++;
                     }
