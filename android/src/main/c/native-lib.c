@@ -86,8 +86,6 @@ bool detect_frida() {
 
     parse_proc_maps_to_fetch_path(filePaths);
 
-    __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "Libc[%x][%x][%x][%x][%x][%x]", __NR_openat,
-                        __NR_lseek, __NR_read, __NR_close, __NR_readlinkat, __NR_nanosleep);
     for (int i = 0; i < NUM_LIBS; i++) {
         bool result = fetch_checksum_of_library(filePaths[i], &elfSectionArr[i]);
         if (filePaths[i] != NULL)
@@ -125,7 +123,7 @@ static inline void parse_proc_maps_to_fetch_path(char **filepaths) {
                     sscanf(map, "%s %s %s %s %s %s", tmp, buf, tmp, tmp, tmp, path);
                     if (buf[2] == 'x') {
                         size_t size = my_strlen(path) + 1;
-                        filepaths[i] = malloc(size);
+                        filepaths[i] = malloc(size * 8);
                         my_strlcpy(filepaths[i], path, size);
                         counter++;
                     }
