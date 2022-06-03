@@ -11,6 +11,9 @@
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
 #import <TargetConditionals.h>
+#import "sys.h"
+
+
 
 @implementation JB
 
@@ -62,11 +65,11 @@ BOOL directoryExist(NSString* path)
 
 BOOL canOpen(NSString* path)
 {
-    FILE *file = fopen([path UTF8String], "r");
-    if(file==nil){
+    int fd = opn([path UTF8String], 0);
+    if(fd == -1){
         return fileExist(path) || directoryExist(path);
     }
-    fclose(file);
+    close(fd);
     return YES;
 }
 
@@ -75,7 +78,7 @@ const char* tuyul(const char* X, const char* Y)
 {
     if (*Y == '\0')
         return X;
-
+    
     for (int i = 0; i < strlen(X); i++)
     {
         if (*(X + i) == *Y)
@@ -84,9 +87,11 @@ const char* tuyul(const char* X, const char* Y)
             return (ptr) ? ptr - 1 : NULL;
         }
     }
-
+    
     return NULL;
 }
+
+
 
 BOOL isRunningOnMac()
 {
@@ -99,49 +104,48 @@ BOOL isRunningOnMac()
 
 BOOL isJb()
 {
-//    Check cydia URL
+    //    Check cydia URL
     if([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"cydia://package/com.avl.com"]])
     {
         return YES;
     }
-    NSArray* checks = [[NSArray alloc]initWithObjects:@"/Application/Cydia.app",
-                       @"/Library/MobileSubstrate/MobileSubstrate.dylib",
-                       @"/bin/bash",
-                       @"/usr/sbin/sshd",
-                       @"/etc/apt",
-                       @"/usr/bin/ssh",
-                       @"/private/var/lib/apt",
-                       @"/private/var/lib/cydia",
-                       @"/private/var/tmp/cydia.log",
-                       @"/Applications/WinterBoard.app",
-                       @"/var/lib/cydia",
-                       @"/private/etc/dpkg/origins/debian",
-                       @"/bin.sh",
-                       @"/private/etc/apt",
-                       @"/etc/ssh/sshd_config",
-                       @"/private/etc/ssh/sshd_config",
-                       @"/Applications/SBSetttings.app",
-                       @"/private/var/mobileLibrary/SBSettingsThemes/",
-                       @"/private/var/stash",
-                       @"/usr/libexec/sftp-server",
-                       @"/usr/libexec/cydia/",
-                       @"/usr/sbin/frida-server",
-                       @"/usr/bin/cycript",
-                       @"/usr/local/bin/cycript",
-                       @"/usr/lib/libcycript.dylib",
-                       @"/System/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist",
-                       @"/System/Library/LaunchDaemons/com.ikey.bbot.plist",
-                       @"/Applications/FakeCarrier.app",
-                       @"/Library/MobileSubstrate/DynamicLibraries/Veency.plist",
-                       @"/Library/MobileSubstrate/DynamicLibraries/LiveClock.plist",
-                       @"/usr/libexec/ssh-keysign",
-                       @"/usr/libexec/sftp-server",
-                       @"/Applications/blackra1n.app",
-                       @"/Applications/IntelliScreen.app",
-                       @"/Applications/Snoop-itConfig.app",
-                       @"/var/checkra1n.dmg",
-                       @"/var/binpack",
-                       nil];
+    NSArray* checks = @[@"/Application/Cydia.app",
+            @"/Library/MobileSubstrate/MobileSubstrate.dylib",
+            @"/bin/bash",
+            @"/usr/sbin/sshd",
+            @"/etc/apt",
+            @"/usr/bin/ssh",
+            @"/private/var/lib/apt",
+            @"/private/var/lib/cydia",
+            @"/private/var/tmp/cydia.log",
+            @"/Applications/WinterBoard.app",
+            @"/var/lib/cydia",
+            @"/private/etc/dpkg/origins/debian",
+            @"/bin.sh",
+            @"/private/etc/apt",
+            @"/etc/ssh/sshd_config",
+            @"/private/etc/ssh/sshd_config",
+            @"/Applications/SBSetttings.app",
+            @"/private/var/mobileLibrary/SBSettingsThemes/",
+            @"/private/var/stash",
+            @"/usr/libexec/sftp-server",
+            @"/usr/libexec/cydia/",
+            @"/usr/sbin/frida-server",
+            @"/usr/bin/cycript",
+            @"/usr/local/bin/cycript",
+            @"/usr/lib/libcycript.dylib",
+            @"/System/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist",
+            @"/System/Library/LaunchDaemons/com.ikey.bbot.plist",
+            @"/Applications/FakeCarrier.app",
+            @"/Library/MobileSubstrate/DynamicLibraries/Veency.plist",
+            @"/Library/MobileSubstrate/DynamicLibraries/LiveClock.plist",
+            @"/usr/libexec/ssh-keysign",
+            @"/usr/libexec/sftp-server",
+            @"/Applications/blackra1n.app",
+            @"/Applications/IntelliScreen.app",
+            @"/Applications/Snoop-itConfig.app",
+            @"/var/checkra1n.dmg",
+            @"/var/binpack"];
     //Check installed app
     for(NSString* check in checks)
     {
@@ -168,7 +172,7 @@ BOOL isJb()
     }
     
     //Check process forking
-    int pid = fork();
+    int pid = frk();
     if(!pid)
     {
         exit(1);
@@ -217,8 +221,7 @@ BOOL isInjectedWithDynamicLibrary()
         if(name==NULL){
             break;
         }
-        if (name != NULL) {
-            char cyinjectHide[] = {
+        char cyinjectHide[] = {
                 A('c'),
                 A('y'),
                 A('i'),
@@ -228,8 +231,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('c'),
                 A('t'),
                 0
-            };
-            char libcycriptHide[] = {
+        };
+        char libcycriptHide[] = {
                 A('l'),
                 A('i'),
                 A('b'),
@@ -241,9 +244,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('p'),
                 A('t'),
                 0
-            };
-            
-            char libfridaHide[] = {
+        };
+        char libfridaHide[] = {
                 A('F'),
                 A('r'),
                 A('i'),
@@ -256,8 +258,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('e'),
                 A('t'),
                 0
-            };
-            char zzzzLibertyDylibHide[] = {
+        };
+        char zzzzLibertyDylibHide[] = {
                 A('z'),
                 A('z'),
                 A('z'),
@@ -276,8 +278,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            char sslkillswitch2dylib[] = {
+        };
+        char sslkillswitch2dylib[] = {
                 A('S'),
                 A('S'),
                 A('L'),
@@ -299,9 +301,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            
-            char zeroshadowdylib[] = {
+        };
+        char zeroshadowdylib[] = {
                 A('0'),
                 A('S'),
                 A('h'),
@@ -316,9 +317,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            
-            char mobilesubstratedylib[] = {
+        };
+        char mobilesubstratedylib[] = {
                 A('M'),
                 A('o'),
                 A('b'),
@@ -341,9 +341,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            
-            char libsparkapplistdylib[] = {
+        };
+        char libsparkapplistdylib[] = {
                 A('l'),
                 A('i'),
                 A('b'),
@@ -366,9 +365,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            
-            char SubstrateInserterdylib[] = {
+        };
+        char SubstrateInserterdylib[] = {
                 A('S'),
                 A('u'),
                 A('b'),
@@ -393,9 +391,8 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-            };
-            
-            char zzzzzzUnSubdylib[] = {
+        };
+        char zzzzzzUnSubdylib[] = {
                 A('z'),
                 A('z'),
                 A('z'),
@@ -414,10 +411,9 @@ BOOL isInjectedWithDynamicLibrary()
                 A('i'),
                 A('b'),
                 0
-                
-            };
-            
-            char kor[] = {
+
+        };
+        char kor[] = {
                 A('.'),
                 A('.'),
                 A('.'),
@@ -425,59 +421,58 @@ BOOL isInjectedWithDynamicLibrary()
                 A('@'),
                 A('#'),
                 0
-            };
-            char cephei[] = {
-                A('/'),A('u'),A('s'),A('r'),A('/'),A('l'),A('i'),A('b'),A('/'),A('C'),A('e'),A('p'),A('h'),A('e'),A('i'),A('.'),A('f'),A('r'),A('a'),A('m'),A('e'),A('w'),A('o'),A('r'),A('k'),A('/'),A('C'),A('e'),A('p'),A('h'),A('e'),A('i'),
+        };
+        char cephei[] = {
+                A('/'), A('u'), A('s'), A('r'), A('/'), A('l'), A('i'), A('b'), A('/'), A('C'), A('e'), A('p'), A('h'), A('e'), A('i'), A('.'), A('f'), A('r'), A('a'), A('m'), A('e'), A('w'), A('o'), A('r'), A('k'), A('/'), A('C'), A('e'), A('p'), A('h'), A('e'), A('i'),
                 0
-            };
-            if (tuyul(name, decryptString(cephei)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(kor)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(mobilesubstratedylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if(tuyul(name, decryptString(libsparkapplistdylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(cyinjectHide)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(libcycriptHide)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(libfridaHide)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(zzzzLibertyDylibHide)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(sslkillswitch2dylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(zeroshadowdylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(SubstrateInserterdylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
-            if (tuyul(name, decryptString(zzzzzzUnSubdylib)) != NULL){
-                if(DEBUGGING){LOG([[NSString alloc] initWithFormat:@"%s", name]);}
-                return YES;
-            }
+        };
+        if (tuyul(name, decryptString(cephei)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(kor)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(mobilesubstratedylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(libsparkapplistdylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(cyinjectHide)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(libcycriptHide)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(libfridaHide)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(zzzzLibertyDylibHide)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(sslkillswitch2dylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(zeroshadowdylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(SubstrateInserterdylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
+        }
+        if (tuyul(name, decryptString(zzzzzzUnSubdylib)) != NULL) {
+            if (DEBUGGING) {LOG([[NSString alloc] initWithFormat:@"%s", name]);}
+            return YES;
         }
     }
     return NO;
@@ -505,22 +500,26 @@ BOOL isDebugged()
 
 BOOL isFromAppStore()
 {
-    #if TARGET_IPHONE_SIMULATOR
-        return NO;
-    #else
-        NSString *provisionPath = [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"];
-        if (nil == provisionPath || 0 == provisionPath.length) {
-            return YES;
-        }
-        return NO;
-    #endif
+#if TARGET_IPHONE_SIMULATOR
+    return NO;
+#else
+    NSString *provisionPath = [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"];
+    if (nil == provisionPath || 0 == provisionPath.length) {
+        return YES;
+    }
+    return NO;
+#endif
 }
 
 BOOL isSecurityCheckPassed()
 {
     if(TARGET_IPHONE_SIMULATOR)return NO;
     if(TARGET_OS_OSX)return NO;
-    return !isJb() && !isInjectedWithDynamicLibrary() && !isDebugged();
+    bool isJBResult = isJb();
+    bool isInjectedResult = isInjectedWithDynamicLibrary();
+    bool isDebuggedResult = isDebugged();
+    printf("Security check JB: %d; Injected: %d; Debugged: %d;", isJBResult, isInjectedResult, isDebuggedResult);
+    return !isJBResult && !isInjectedResult && !isDebuggedResult;
     
 }
 

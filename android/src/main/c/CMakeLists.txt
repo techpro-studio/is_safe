@@ -8,10 +8,6 @@ cmake_minimum_required(VERSION 3.4.1)
 set(can_use_assembler TRUE)
 enable_language(ASM)
 
-#Start - Comment this block for generating non-obfuscated builds
-
-#End - Comment this block for generating non-obfuscated builds
-
 #Set flags to detect arm32 bit or arm64 bit for switching between elf structures
 if(${ANDROID_ABI} STREQUAL "armeabi-v7a" OR ${ANDROID_ABI} STREQUAL "x86")
     add_definitions("-D_32_BIT")
