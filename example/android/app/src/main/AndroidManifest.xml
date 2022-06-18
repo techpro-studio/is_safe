@@ -1,9 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="studio.techpro.is_safe.is_safe_example">
    <application
+       android:extractNativeLibs="true"
         android:label="is_safe_example"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+       android:zygotePreloadName="studio.techpro.is_safe.AppZygote"
+        android:icon="@mipmap/ic_launcher"
+       tools:targetApi="q">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,5 +34,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+       <service
+           android:name="studio.techpro.is_safe.RemoteService"
+           android:isolatedProcess="true"
+           android:useAppZygote="true" />
     </application>
 </manifest>

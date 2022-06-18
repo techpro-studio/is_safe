@@ -1,24 +1,9 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <malloc.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <fcntl.h>
-#include <elf.h>
-#include <dirent.h>
-#include <ctype.h>
 
-#include <sys/prctl.h>
-#include <sys/stat.h>
-#include <asm/unistd.h>
-#include <android/log.h>
 
-#include "syscall_arch.h"
-#include "syscalls.h"
 #include "native-lib.h"
+
+
 
 #define MAX_LINE 512
 #define MAX_LENGTH 256
@@ -42,11 +27,12 @@ typedef struct stExecSection {
 } execSection;
 
 
-#define NUM_LIBS 2
+
+#define NUM_LIBS 3
 
 //Include more libs as per your need, but beware of the performance bottleneck especially
 //when the size of the libraries are > few MBs
-static const char *libstocheck[NUM_LIBS] = {"libnative-lib.so", LIBC};
+static const char *libstocheck[NUM_LIBS] = {"libnative-lib.so", LIBC, "libandroid_runtime.so"};
 static execSection *elfSectionArr[NUM_LIBS] = {NULL};
 
 
@@ -75,10 +61,104 @@ static inline bool detect_frida_namedpipe();
 
 static inline bool detect_frida_memdiskcompare();
 
-JNIEXPORT jboolean JNICALL
-Java_studio_techpro_is_1safe_FridaDetector_detected(JNIEnv *env, jobject this) {
-    return detect_frida();
+
+
+__attribute__((always_inline))
+static inline int  my_facct(int _dir_fd, const void* _path, int _flags, int _mode ){
+    return (int)__syscall4(48, _dir_fd, (long)_path, _flags, _mode);
 }
+
+__attribute__((always_inline))
+static inline int  my_fstat(int _dir_fd, const void* _path, struct stat * _stat, int flag){
+    return (int)__syscall4(79, _dir_fd, (long)_path, (long)_stat, flag);
+}
+
+__attribute__((always_inline))
+static inline int  my_mknode_at(int _dir_fd, const void* _path, int mode){
+    return (int)__syscall3(21, _dir_fd, (long)_path, mode);
+}
+
+static size_t socket_len(struct sockaddr_un *sun) {
+    if (sun->sun_path[0])
+        return sizeof(sa_family_t) + strlen(sun->sun_path) + 1;
+    else
+        return sizeof(sa_family_t) + strlen(sun->sun_path + 1) + 1;
+}
+
+
+
+
+socklen_t setup_sockaddr(struct sockaddr_un *sun, const char *name) {
+    memset(sun, 0, sizeof(*sun));
+    sun->sun_family = AF_UNIX;
+    strcpy(sun->sun_path + 1, name);
+    return socket_len(sun);
+}
+
+bool connect_to_magisk_daemon(){
+    struct sockaddr_un sun;
+    socklen_t len = setup_sockaddr(&sun, "d30138f2310a9fb9c54a3e0c21f58591");
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    int result = connect(fd, (struct sockaddr*) &sun, len);
+    LOGI("Socket allocated, %d, connected %d", fd, result);
+    if (result != 0) {
+        return false;
+    }
+    return true;
+}
+
+static char *blacklistedMountPaths[] = {
+        "magisk",
+        "core/mirror",
+        "core/img"
+};
+
+__attribute__((always_inline))
+static inline bool is_mountpaths_detected() {
+    int len = sizeof(blacklistedMountPaths) / sizeof(blacklistedMountPaths[0]);
+
+    bool bRet = false;
+
+    int fd = my_openat(AT_FDCWD, "/proc/self/mounts", O_RDONLY, 0);
+    if (fd == -1)
+        goto exit;
+
+    my_lseek(fd, 0L, SEEK_END);
+    struct stat _stat;
+    fstat(fd, &_stat);
+    long size = _stat.st_size;
+    LOGI("Opening Mount file size: %ld", size);
+    /* For some reason size comes as zero */
+    if (size == 0)
+        size = 20000;  /*This will differ for different devices */
+    char *buffer = calloc(size, sizeof(char));
+    if (buffer == NULL)
+        goto exit;
+
+    size_t read = my_read(fd, buffer, size);
+    int count = 0;
+    for (int i = 0; i < len; i++) {
+        LOGI("Checking Mount Path  :%s", blacklistedMountPaths[i]);
+        char *rem = strstr(buffer, blacklistedMountPaths[i]);
+        if (rem != NULL) {
+            count++;
+            LOGI("Found Mount Path :%s", blacklistedMountPaths[i]);
+            break;
+        }
+    }
+    if (count > 0)
+        bRet = true;
+
+    exit:
+
+    if (buffer != NULL)
+        free(buffer);
+    if (fd != -1)
+        my_close(fd);
+
+    return bRet;
+}
+
 
 bool detect_frida() {
 
@@ -86,8 +166,11 @@ bool detect_frida() {
 
     parse_proc_maps_to_fetch_path(filePaths);
 
+    LOGI("Filepath %s %s %s", filePaths[0], filePaths[1], filePaths[2]);
+
     for (int i = 0; i < NUM_LIBS; i++) {
         bool result = fetch_checksum_of_library(filePaths[i], &elfSectionArr[i]);
+        LOGI("ELF %s memsize %lu %lu", filePaths[i], elfSectionArr[i]->memsize[0],  elfSectionArr[i]->memsize[1]);
         if (filePaths[i] != NULL)
             free(filePaths[i]);
         if (!result) {
@@ -117,6 +200,7 @@ static inline void parse_proc_maps_to_fetch_path(char **filepaths) {
         while ((read_one_line(fd, map, MAX_LINE)) > 0) {
             for (int i = 0; i < NUM_LIBS; i++) {
                 if (my_strstr(map, libstocheck[i]) != NULL) {
+                    LOGI("Lib inside proc maps %d %s", i, map);
                     char tmp[MAX_LENGTH] = "";
                     char path[MAX_LENGTH] = "";
                     char buf[5] = "";
@@ -159,11 +243,11 @@ static inline bool fetch_checksum_of_library(const char *filePath, execSection *
         my_memset(&sectHdr, 0, sizeof(Elf_Shdr));
         my_read(fd, &sectHdr, sizeof(Elf_Shdr));
 
-//        __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "SectionHeader[%d][%ld]", sectHdr.sh_name, sectHdr.sh_flags);
+        __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "SectionHeader[%d][%ld]", sectHdr.sh_name, sectHdr.sh_flags);
 
         //Typically PLT and Text Sections are executable sections which are protected
         if (sectHdr.sh_flags & SHF_EXECINSTR) {
-//            __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "SectionHeader[%d][%ld]", sectHdr.sh_name, sectHdr.sh_flags);
+            __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "SectionHeader[%d][%ld]", sectHdr.sh_name, sectHdr.sh_flags);
 
             offset[execSectionCount] = sectHdr.sh_offset;
             memsize[execSectionCount] = sectHdr.sh_size;
@@ -191,9 +275,9 @@ static inline bool fetch_checksum_of_library(const char *filePath, execSection *
         (*pTextSection)->memsize[i] = memsize[i];
         (*pTextSection)->checksum[i] = checksum(buffer, memsize[i]);
         free(buffer);
-//        __android_log_print(ANDROID_LOG_WARN, APPNAME, "ExecSection:[%d][%ld][%ld][%ld]", i,
-//                            offset[i],
-//                            memsize[i], (*pTextSection)->checksum[i]);
+        __android_log_print(ANDROID_LOG_WARN, APPNAME, "ExecSection:[%d][%ld][%ld][%ld]", i,
+                            offset[i],
+                            memsize[i], (*pTextSection)->checksum[i]);
     }
 
     my_close(fd);
@@ -210,7 +294,7 @@ scan_executable_segments(char *map, execSection *pElfSectArr, const char *librar
     char tmp[100] = "";
 
     sscanf(map, "%lx-%lx %s %s %s %s %s", &start, &end, buf, tmp, tmp, tmp, path);
-    //__android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "Map [%s]", map);
+    __android_log_print(ANDROID_LOG_VERBOSE, APPNAME, "Map [%s]", map);
 
     if (buf[2] == 'x') {
         if (buf[0] == 'r') {
@@ -402,4 +486,5 @@ static inline bool detect_frida_memdiskcompare() {
 
     return false;
 }
+
 

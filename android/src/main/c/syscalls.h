@@ -46,4 +46,9 @@ static inline void my_exit(int __status){
     __syscall1(__NR_exit, __status);
 }
 
+__attribute__((always_inline))
+static inline int my_fork(){
+    return (int) __syscall0(2);
+}
+
 #endif //DETECTFRIDA_SYSCALLS_H
