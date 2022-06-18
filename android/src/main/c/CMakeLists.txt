@@ -23,7 +23,7 @@ add_library( # Sets the name of the library.
              SHARED
 
              # Provides a relative path to your source file(s).
-        native-lib.c jni.cpp)
+        native-lib.c)
 
 target_include_directories(native-lib PRIVATE arch/${ANDROID_ABI})
 
