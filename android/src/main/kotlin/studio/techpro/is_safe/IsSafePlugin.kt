@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.annotation.NonNull
+import com.scottyab.rootbeer.RootBeer
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -39,7 +40,9 @@ class IsSafePlugin: FlutterPlugin, MethodCallHandler, ServiceConnection{
   private fun getResult(): Boolean {
     val frida = Native.detectFrida();
     val isSu = service!!.haveSu();
-    return !frida && !isSu;
+    val rootBeer = RootBeer(context);
+    val beerDetection = rootBeer.isRootedWithBusyBoxCheck;
+    return !frida && !isSu && !beerDetection;
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
