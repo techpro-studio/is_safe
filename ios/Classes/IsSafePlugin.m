@@ -1,5 +1,9 @@
+#import <TargetConditionals.h>
+
 #import "IsSafePlugin.h"
+#if TARGET_CPU_ARM64
 #import "JB.h"
+#endif
 
 @implementation IsSafePlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
@@ -12,10 +16,15 @@
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
   if ([@"isSafe" isEqualToString:call.method]) {
-    result(@(isSecurityCheckPassed()));
+    #if TARGET_CPU_ARM64
+        result(@(isSecurityCheckPassed()));
+    #else
+        result(@(YES));
+    #endif
   } else {
     result(FlutterMethodNotImplemented);
   }
 }
 
 @end
+
