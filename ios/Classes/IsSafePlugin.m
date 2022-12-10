@@ -1,7 +1,7 @@
 #import <TargetConditionals.h>
 
 #import "IsSafePlugin.h"
-#if TARGET_CPU_ARM64
+#if defined(__arm64__)
 #import "JB.h"
 #endif
 
@@ -16,7 +16,8 @@
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
   if ([@"isSafe" isEqualToString:call.method]) {
-    #if TARGET_CPU_ARM64
+    // since it is ios 11 + it should be fine
+    #if defined(__arm64__)
         result(@(isSecurityCheckPassed()));
     #else
         result(@(YES));

@@ -65,7 +65,12 @@ BOOL directoryExist(NSString* path)
 
 BOOL canOpen(NSString* path)
 {
+#if defined(__arm64__)
     int fd = opn([path UTF8String], 0);
+#else
+    int fd = open([path UTF8String], 0);
+#endif
+    
     if(fd == -1){
         return fileExist(path) || directoryExist(path);
     }
@@ -172,7 +177,11 @@ BOOL isJb()
     }
     
     //Check process forking
-    int pid = frk();
+    #if defined(__arm64__)
+        int pid = frk();
+    #else
+        int pid = fork();
+    #endif
     if(!pid)
     {
         exit(1);
