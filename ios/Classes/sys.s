@@ -1,4 +1,7 @@
 
+
+#if defined(__arm64__)
+
 .text
 .global _frk
 .align 4
@@ -54,3 +57,5 @@ _wr:
     svc #0x80
     b.cs       LFail                       // Carry bit indicates failure
     b.cc       LSuccess
+
+#endif
